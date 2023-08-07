@@ -2,7 +2,7 @@ import pandas as pd
 from fuzzywuzzy import fuzz
 
 # Read the CSV files into DataFrames
-npi_url = 'https://raw.githubusercontent.com/benz3927/Healthcare-Data-Queries/main/npi_weekly.csv'
+npi_url = 'https://github.com/benz3927/Healthcare-Data-Queries/blob/main/data/npi/npi_weekly.csv'
 pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/pecos.csv'
 npi_df = pd.read_csv(npi_url, dtype=str)
 pecos_df = pd.read_csv(pecos_path, dtype=str)
