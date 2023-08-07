@@ -1,10 +1,11 @@
 import pandas as pd
 from fuzzywuzzy import fuzz
+import re
 
 # Read the CSV files into DataFrames
-npi_url = 'https://github.com/benz3927/Healthcare-Data-Queries/blob/main/data/npi/npi_weekly.csv'
-pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/pecos.csv'
-npi_df = pd.read_csv(npi_url, dtype=str)
+npi_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi/npi_weekly.csv'
+pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos.csv'
+npi_df = pd.read_csv(npi_path, dtype=str)
 pecos_df = pd.read_csv(pecos_path, dtype=str)
 
 # Define columns to compare and their weights
@@ -18,12 +19,18 @@ columns_to_compare = [
     ('provider_business_mailing_address_postal_code', 'zip', 15)
 ]
 
+# Function to preprocess and clean a value
+def clean_value(value):
+    # Remove special characters including commas
+    cleaned_value = re.sub(r'[^\w\s]', '', value)
+    return cleaned_value
+
 # Function to calculate similarity score
 def calculate_similarity_score(row1, row2):
     similarity_score = 0
     for col1, col2, weight in columns_to_compare:
-        value1 = str(row1[col1]) if not pd.isnull(row1[col1]) else ''
-        value2 = str(row2[col2]) if not pd.isnull(row2[col2]) else ''
+        value1 = clean_value(str(row1[col1])) if not pd.isnull(row1[col1]) else ''
+        value2 = clean_value(str(row2[col2])) if not pd.isnull(row2[col2]) else ''
         score = fuzz.token_sort_ratio(value1, value2) / 100
         similarity_score += (score * weight)
     return similarity_score
