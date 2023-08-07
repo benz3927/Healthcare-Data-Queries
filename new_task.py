@@ -1,65 +1,54 @@
 import pandas as pd
 from fuzzywuzzy import fuzz
 
-# Read the CSV files
-npi_file_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/npi_weekly.csv'
-pecos_file_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/pecos.csv'
+# Read the CSV files into DataFrames
+npi_url = 'https://raw.githubusercontent.com/benz3927/Healthcare-Data-Queries/main/npi_weekly.csv'
+pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/pecos.csv'
+npi_df = pd.read_csv(npi_url, dtype=str)
+pecos_df = pd.read_csv(pecos_path, dtype=str)
 
-# Read the CSV files with the correct column names
-npi_df = pd.read_csv(npi_file_path, usecols=[
-    'provider_first_name', 'provider_last_name_legal_name',
-    'provider_middle_name', 'provider_gender_code',
-    'provider_first_line_business_mailing_address',
-    'provider_business_mailing_address_city_name',
-    'provider_business_mailing_address_state_name',
-    'provider_business_mailing_address_postal_code'
-], dtype='string')
+# Define columns to compare and their weights
+columns_to_compare = [
+    ('provider_last_name_legal_name', 'lst_nm', 25),
+    ('provider_middle_name', 'mid_nm', 10),
+    ('provider_gender_code', 'gndr', 10),
+    ('provider_first_line_business_mailing_address', 'adr_ln_1', 25),
+    ('provider_business_mailing_address_city_name', 'cty', 10),
+    ('provider_business_mailing_address_state_name', 'st', 15),
+    ('provider_business_mailing_address_postal_code', 'zip', 15)
+]
 
-pecos_df = pd.read_csv(pecos_file_path, usecols=[
-    'frst_nm', 'lst_nm', 'mid_nm', 'gndr',
-    'adr_ln_1', 'cty', 'st', 'zip'
-], dtype='string')
-
-# Function to calculate the weighted score
+# Function to calculate similarity score
 def calculate_similarity_score(row1, row2):
-    weighted_score = 0
+    similarity_score = 0
+    for col1, col2, weight in columns_to_compare:
+        value1 = str(row1[col1]) if not pd.isnull(row1[col1]) else ''
+        value2 = str(row2[col2]) if not pd.isnull(row2[col2]) else ''
+        score = fuzz.token_sort_ratio(value1, value2) / 100
+        similarity_score += (score * weight)
+    return similarity_score
 
-    # Define the weights for each column
-    weights = {
-        'provider_first_name': 25,
-        'provider_last_name_legal_name': 25,
-        'provider_middle_name': 10,
-        'provider_gender_code': 10,
-        'provider_first_line_business_mailing_address': 25,
-        'provider_business_mailing_address_city_name': 10,
-        'provider_business_mailing_address_state_name': 15,
-        'provider_business_mailing_address_postal_code': 15
-    }
+# Create a dictionary to store the best candidate indices
+best_candidates = {}
 
-    for col in npi_df.columns:
-        score = fuzz.token_sort_ratio(str(row1[col]), str(row2[col])) / 100
-        weighted_score += score * weights[col]
+# Calculate the similarity score for each row in pecos_df against all rows in npi_df
+for pecos_idx, pecos_row in pecos_df.iterrows():
+    max_similarity_score = 0
+    best_candidate_idx = None
+    for npi_idx, npi_row in npi_df.iterrows():
+        similarity_score = calculate_similarity_score(npi_row, pecos_row)
+        if similarity_score > max_similarity_score:
+            max_similarity_score = similarity_score
+            best_candidate_idx = npi_idx
+    if best_candidate_idx is not None:
+        best_candidates[pecos_idx] = best_candidate_idx
 
-    return weighted_score
+# Print the best candidate pairs (PECOS row indices and best candidate NPI row indices)
+for pecos_idx, npi_idx in best_candidates.items():
+    print(f"PECOS row index {pecos_idx} has the best candidate NPI row index: {npi_idx}")
 
-# List to store matching pairs of row indices
-matching_pairs = []
+# Export the best candidates dictionary to a CSV file
+output_csv_path = 'best_candidate_pairs.csv'
+pd.DataFrame.from_dict(best_candidates, orient='index', columns=['Best_NPI_Index']).to_csv(output_csv_path)
 
-# Loop through each row in pecos.csv
-for pecos_index, pecos_row in pecos_df.iterrows():
-    max_score = 0
-    matched_npi_index = None
-
-    # Loop through each row in npi.csv and find the row with the highest score
-    for npi_index, npi_row in npi_df.iterrows():
-        score = calculate_similarity_score(npi_row, pecos_row)
-        if score > max_score:
-            max_score = score
-            matched_npi_index = npi_index
-
-    # If the highest score is above 80, store the matching pair of row indices
-    if max_score > 80:
-        matching_pairs.append((matched_npi_index, pecos_index))
-
-# Print the matching pairs
-print(matching_pairs)
+print("Matching process completed. The best candidate pairs have been exported to 'best_candidate_pairs.csv'.")
