@@ -8,46 +8,53 @@ pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos
 npi_df = pd.read_csv(npi_path, dtype=str, nrows=100)
 pecos_df = pd.read_csv(pecos_path, dtype=str, nrows=100)
 
-# Define columns to compare
+# Define columns to compare and their weights
 columns_to_compare = [
-    ('provider_last_name_legal_name', 'lst_nm'),
-    ('provider_middle_name', 'mid_nm'),
-    ('provider_gender_code', 'gndr'),
-    ('provider_first_line_business_mailing_address', 'adr_ln_1'),
-    ('provider_business_mailing_address_city_name', 'cty'),
-    ('provider_business_mailing_address_state_name', 'st'),
-    ('provider_business_mailing_address_postal_code', 'zip')
+    ('Provider Last Name (Legal Name)', 'lst_nm', 25),
+    ('Provider Middle Name', 'mid_nm', 10),
+    ('Provider Gender Code', 'gndr', 10),
+    ('Provider First Line Business Mailing Address', 'adr_ln_1', 25),
+    ('Provider Business Mailing Address City Name', 'cty', 10),
+    ('Provider Business Mailing Address State Name', 'st', 15),
+    ('Provider Business Mailing Address Postal Code', 'zip', 15)
 ]
 
-# Clean and preprocess values
+# Function to preprocess and clean a value
 def clean_value(value):
-    return re.sub(r'[^\w\s]', '', value)
+    # Remove special characters including commas
+    cleaned_value = re.sub(r'[^\w\s]', '', value)
+    return cleaned_value
 
-# Calculate similarity score for a pair of rows
-def calculate_similarity_score(pecos_row):
-    max_similarity_score = 0
-    best_candidate_idx = None
-    for npi_idx, npi_row in npi_df.iterrows():
-        similarity_score = 0
-        for col_pecos, col_npi in columns_to_compare:
-            value1 = clean_value(str(pecos_row[col_pecos])) if not pd.isnull(pecos_row[col_pecos]) else ''
-            value2 = clean_value(str(npi_row[col_npi])) if not pd.isnull(npi_row[col_npi]) else ''
-            score = fuzz.token_sort_ratio(value1, value2) / 100
-            similarity_score += score
-        if similarity_score > max_similarity_score:
-            max_similarity_score = similarity_score
-            best_candidate_idx = npi_idx
-    return best_candidate_idx, max_similarity_score
+# Function to calculate similarity score
+def calculate_similarity_score(row1, row2):
+    similarity_score = 0
+    for col1, col2, weight in columns_to_compare:
+        value1 = clean_value(str(row1[col1])) if not pd.isnull(row1[col1]) else ''
+        value2 = clean_value(str(row2[col2])) if not pd.isnull(row2[col2]) else ''
+        score = fuzz.token_sort_ratio(value1, value2)
+        similarity_score += (score * weight)
+    return similarity_score
 
 # Create a dictionary to store the best candidate indices
 best_candidates = {}
 
-# Calculate similarity scores for each PECOS row
+# Calculate the similarity score for each row in pecos_df against all rows in npi_df
 for pecos_idx, pecos_row in pecos_df.iterrows():
-    best_candidate_idx, max_similarity_score = calculate_similarity_score(pecos_row)
-    if best_candidate_idx is not None:
-        best_candidates[pecos_idx] = (best_candidate_idx, max_similarity_score)
+    max_similarity_score = 0
+    best_candidate_idx = ""
+    for npi_idx, npi_row in npi_df.iterrows():
+        similarity_score = calculate_similarity_score(npi_row, pecos_row)
+        if similarity_score > max_similarity_score:
+            max_similarity_score = similarity_score
+            best_candidate_idx = str(npi_idx)
+    if best_candidate_idx:
+        best_candidates[pecos_idx] = best_candidate_idx
 
-# Print the best candidate pairs (PECOS row indices and best candidate NPI row indices)
-for pecos_idx, (npi_idx, score) in best_candidates.items():
-    print(f"PECOS row index {pecos_idx} has the best candidate NPI row index: {npi_idx} (Similarity Score: {score:.2f})")
+# Create a DataFrame from the best candidates dictionary
+best_candidates_df = pd.DataFrame(best_candidates.items(), columns=['PECOS Row Index', 'NPI Row Index Candidate'])
+
+# Output the best candidate pairs to the specified path
+output_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/npi_pair_candidates/best_candidate_pairs.csv'
+best_candidates_df.to_csv(output_path, index=False)
+
+print("Matching process completed. The best candidate pairs have been exported to:", output_path)
