@@ -1,67 +1,53 @@
 import pandas as pd
-from fuzzywuzzy import fuzz
-import re
-import concurrent.futures
+import pyxdameraulevenshtein as dl
 
-# Read the CSV files into DataFrames
-npi_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi_cleaned.csv'
+# Load the CSV data into DataFrames
 pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos_cleaned.csv'
-npi_df = pd.read_csv(npi_path, dtype=str)
-pecos_df = pd.read_csv(pecos_path, dtype=str)
-# Only look at first 100 pecos
-pecos_df = pecos_df.head(100)
+npi_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi_cleaned.csv'
+pecos_df = pd.read_csv(pecos_path)
+npi_df = pd.read_csv(npi_path)
 
-# Define columns to compare
+# List of columns to compare in pairs
 columns_to_compare = [
-    ('npi_fname', 'pecos_fname'),
-    ('npi_lname', 'pecos_lname'),
-    ('npi_mname', 'pecos_mname'),
-    ('npi_gender', 'pecos_gender'),
-    ('npi_adr1', 'pecos_adr1'),
-    ('npi_city', 'pecos_city'),
-    ('npi_state', 'pecos_state'),
-    ('npi_zip', 'pecos_zip')
+    'fname', 'lname', 'mname', 'gender', 'adr1', 'city', 'state', 'zip'
 ]
 
-# Clean and preprocess values
-def clean_value(value):
-    return re.sub(r'[^\w\s]', '', value)
+# Function to calculate dissimilarity percentage
+def calculate_dissimilarity_percentage(column1, column2):
+    total_length = len(column1)
+    total_dissimilarity = 0
+    for value1, value2 in zip(column1, column2):
+        distance = dl.normalized_damerau_levenshtein_distance(str(value1), str(value2))
+        total_dissimilarity += distance
+    dissimilarity_percentage = total_dissimilarity / total_length
+    return dissimilarity_percentage
 
-# Calculate similarity score for a pair of rows
-def calculate_similarity_score(pair):
-    pecos_idx, pecos_row = pair
-    max_similarity_score = 0
-    best_candidate_idx = None
+# Create a DataFrame to store the results
+results = []
+
+# Match each row of the first 100 pecos with all rows of npi
+for pecos_idx, pecos_row in pecos_df.head(100).iterrows():
+    candidate_scores = []
+    
     for npi_idx, npi_row in npi_df.iterrows():
-        similarity_score = 0
-        for col_pecos, col_npi in columns_to_compare:
-            value1 = clean_value(str(pecos_row[col_pecos])) if not pd.isnull(pecos_row[col_pecos]) else ''
-            value2 = clean_value(str(npi_row[col_npi])) if not pd.isnull(npi_row[col_npi]) else ''
-            score = fuzz.token_sort_ratio(value1, value2) / 100
-            similarity_score += score
-        if similarity_score > max_similarity_score:
-            max_similarity_score = similarity_score
-            best_candidate_idx = npi_idx
-    return pecos_idx, best_candidate_idx, max_similarity_score
+        dissimilarity_percentage = calculate_dissimilarity_percentage(
+            pecos_row[['pecos_' + col for col in columns_to_compare]],
+            npi_row[['npi_' + col for col in columns_to_compare]]
+        )
+        
+        if dissimilarity_percentage < 1:  # Adjust the threshold as needed
+            candidate_scores.append((npi_idx, 1 - dissimilarity_percentage))
+    
+    if candidate_scores:
+        candidate_scores.sort(key=lambda x: -x[1])  # Sort candidates by similarity score
+        best_candidates = [str(candidate[0]) for candidate in candidate_scores]
+        results.append((pecos_idx, ','.join(best_candidates)))
 
-# Create a list of pairs for parallel processing
-pairs = [(pecos_idx, pecos_row) for pecos_idx, pecos_row in pecos_df.iterrows()]
-
-# Calculate similarity scores using parallel processing
-best_candidates = {}
-with concurrent.futures.ProcessPoolExecutor() as executor:
-    results = executor.map(calculate_similarity_score, pairs)
-    for pecos_idx, npi_idx, score in results:
-        if pecos_idx not in best_candidates:
-            best_candidates[pecos_idx] = []
-        best_candidates[pecos_idx].append((npi_idx, score))
-
-# Export the best candidates dictionary to a CSV file
-output_csv_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/npi_pair_candidates.csv'
+# Create the output CSV
+output_csv_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/matched_candidates.csv'
 with open(output_csv_path, 'w') as f:
-    f.write("PECOS row index,Best candidate NPI row index,Max Similarity Score\n")
-    for pecos_idx, candidates in best_candidates.items():
-        for npi_idx, score in candidates:
-            f.write(f"{pecos_idx},{npi_idx},{score}\n")
+    f.write("Pecos Row Index,NPI Candidate Row IDs\n")
+    for pecos_idx, candidate_ids in results:
+        f.write(f"{pecos_idx},{candidate_ids}\n")
 
-print("Matching process completed. The best candidate pairs have been exported to 'npi_pair_candidates.csv'.")
+print(f"Matching process completed. The results have been exported to '{output_csv_path}'.")
