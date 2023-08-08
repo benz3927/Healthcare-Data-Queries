@@ -12,4 +12,4 @@ print(npi_df.iloc[0])
 
 # Print the 71st row in pecos.csv
 print("71st row in pecos.csv:")
-print(pecos_df.iloc[70])  # Note: Python uses 0-based indexing, so 70 corresponds to the 71st row
+print(pecos_df.iloc[70])
