@@ -5,6 +5,6 @@ SELECT
     gndr AS pecos_gender,
     adr_ln_1 AS pecos_adr1,
     cty AS pecos_city,
-    st AS pecos_State,
+    st AS pecos_state,
     zip AS pecos_zip
 FROM hcare.pecos
