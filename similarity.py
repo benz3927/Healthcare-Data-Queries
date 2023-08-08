@@ -45,29 +45,36 @@ print(df)
 url2 = 'https://raw.githubusercontent.com/benz3927/Healthcare-Data-Queries/main/weighted_similarity_scores.csv'
 df = pd.read_csv(url2)
 
-# Check each column with "String_Distance" in its name and set the value to 0 if it's less than 0.8
-for col in df.columns:
-    if "String_Distance" in col:
-        df[col][df[col] < 0.8] = 0
+# Create a new DataFrame to store matched pairs
+output_data = []
+row_labels = []
 
-# Calculate the Weighted Score
-weighted_score = (df['NPI_First_Name_String_Distance_Score'] * df['First_Name_Score']) + \
-                 (df['NPI_Last_Name_String_Distance_Score'] * df['Last_Name_Score']) + \
-                 (df['NPI_Middle_Initial_String_Distance_Score'] * df['Middle_Name_Score']) + \
-                 (df['NPI_Gender_Code_String_Distance_Score'] * df['Gender_Score']) + \
-                 (df['NPI_Address_Line_1_String_Distance_Score'] * df['Address_Line_1_Score']) + \
-                 (df['NPI_City_String_Distance_Score'] * df['City_Score']) + \
-                 (df['NPI_State_String_Distance_Score'] * df['State_Score']) + \
-                 (df['NPI_Zip_Code_String_Distance_Score'] * df['Zip_Score'])
+for index, row in df.iterrows():
+    npi_data = [
+        row['NPI_First_Name'], row['NPI_Last_Name'], row['NPI_Middle_Initial'],
+        row['NPI_Gender_Code'], row['NPI_Address_Line_1'], row['NPI_City'],
+        row['NPI_State'], row['NPI_Zip_Code']
+    ]
+    
+    pecos_data = [
+        row['PECOS_First_Name'], row['PECOS_Last_Name'], row['PECOS_Middle_Initial'],
+        row['PECOS_Gender_Code'], row['PECOS_Address_Line_1'], row['PECOS_City'],
+        row['PECOS_State'], row['PECOS_Zip_Code']
+    ]
+    
+    output_data.extend([npi_data, pecos_data])
+    row_labels.extend(['NPI', 'PECOS'])
 
-# Add the 'Weighted_Score' column to the DataFrame
-df['Weighted_Score'] = weighted_score
+# Create a new DataFrame for the matched pairs
+output_df = pd.DataFrame(output_data, columns=[
+    'First Name', 'Last Name', 'Middle Initial', 'Gender',
+    'Address Line 1', 'City', 'State', 'Zip Code'
+])
+output_df.insert(0, 'Row Label', row_labels)
 
 # Export the new DataFrame to a CSV file
-output_csv_path = 'final_weighted_scores.csv'
-df.to_csv(output_csv_path, index=False)
+output_csv_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/matched_pairs.csv'
 
-print("New CSV file 'final_weighted_scores.csv' has been created with the additional 'Weighted_Score' column.")
+output_df.to_csv(output_csv_path, index=False)
 
-
-
+print("New CSV file 'matched_pairs.csv' has been created with matched pairs and alternating row labels.")
