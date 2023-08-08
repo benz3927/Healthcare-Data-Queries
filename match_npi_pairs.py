@@ -4,20 +4,21 @@ import re
 import concurrent.futures
 
 # Read the CSV files into DataFrames
-npi_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi/npi_weekly.csv'
-pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos.csv'
+npi_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi_cleaned.csv'
+pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos_cleaned.csv'
 npi_df = pd.read_csv(npi_path, dtype=str)
 pecos_df = pd.read_csv(pecos_path, dtype=str)
 
 # Define columns to compare
 columns_to_compare = [
-    ('Provider Last Name (Legal Name)', 'lst_nm'),
-    ('Provider Middle Name', 'mid_nm'),
-    ('Provider Gender Code', 'gndr'),
-    ('Provider First Line Business Mailing Address', 'adr_ln_1'),
-    ('Provider Business Mailing Address City Name', 'cty'),
-    ('Provider Business Mailing Address State Name', 'st'),
-    ('Provider Business Mailing Address Postal Code', 'zip')
+    ('npi_fname', 'pecos_fname'),
+    ('npi_lname', 'pecos_lname'),
+    ('npi_mname', 'pecos_mname'),
+    ('npi_gender', 'pecos_gender'),
+    ('npi_adr1', 'pecos_adr1'),
+    ('npi_city', 'pecos_city'),
+    ('npi_state', 'pecos_state'),
+    ('npi_zip', 'pecos_zip')
 ]
 
 # Clean and preprocess values
