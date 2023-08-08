@@ -1,12 +1,17 @@
 import pandas as pd
 from fuzzywuzzy import fuzz
 import re
+import random
 
 # Read the CSV files into DataFrames
 npi_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi/npi_weekly.csv'
 pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos.csv'
-npi_df = pd.read_csv(npi_path, dtype=str, nrows=100)
-pecos_df = pd.read_csv(pecos_path, dtype=str, nrows=100)
+npi_df = pd.read_csv(npi_path, dtype=str)
+pecos_df = pd.read_csv(pecos_path, dtype=str)
+
+# Randomly sample 100 rows from PECOS
+random.seed(42)  # For reproducibility
+pecos_sample = pecos_df.sample(n=100)
 
 # Define columns to compare and their weights
 columns_to_compare = [
@@ -38,8 +43,8 @@ def calculate_similarity_score(row1, row2):
 # Create a dictionary to store the best candidate indices
 best_candidates = {}
 
-# Calculate the similarity score for each row in pecos_df against all rows in npi_df
-for pecos_idx, pecos_row in pecos_df.iterrows():
+# Calculate the similarity score for each sampled row in pecos_sample against all rows in npi_df
+for pecos_idx, pecos_row in pecos_sample.iterrows():
     max_similarity_score = 0
     best_candidate_idx = ""
     for npi_idx, npi_row in npi_df.iterrows():
