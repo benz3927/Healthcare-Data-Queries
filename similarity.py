@@ -2,7 +2,7 @@ import pandas as pd
 from fuzzywuzzy import fuzz
 
 # Read the CSV file into the DataFrame 'df'
-url = 'https://raw.githubusercontent.com/benz3927/Healthcare-Data-Queries/main/complete.csv'
+url = 'https://raw.githubusercontent.com/benz3927/Healthcare-Data-Queries/main/data/complete.csv'
 df = pd.read_csv(url)
 
 # Function to calculate similarity score
