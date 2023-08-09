@@ -1,62 +1,58 @@
 import pandas as pd
-import numpy as np
 import pyxdameraulevenshtein as dl
 
-# Read the CSV files into DataFrames
-npi_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi_cleaned.csv'
-pecos_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos_cleaned.csv'
-npi_df = pd.read_csv(npi_path)
-pecos_df = pd.read_csv(pecos_path)
+# Read the CSV file into the DataFrame 'df'
+path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/matched_pairs.csv'
+df = pd.read_csv(path)
+
+# List of columns to compare in pairs
+columns_to_compare = [
+    'First Name', 'Last Name', 'Middle Initial', 'Gender', 'Address Line 1', 'City', 'State', 'Zip Code'
+]
 
 # Function to calculate similarity score between two strings
 def calculate_similarity_score(str1, str2):
     similarity_score = 1 - dl.normalized_damerau_levenshtein_distance(str1, str2)
     return similarity_score
 
-# List of columns to compare in pairs
-columns_to_compare = [
-    'fname', 'lname', 'mname', 'gender', 'adr1', 'city', 'state', 'zip'
-]
+# Calculate the weighted scores based on similarity scores
+weighted_scores = []
 
-# Calculate similarity matrix
-similarity_matrix = np.zeros((len(npi_df), len(pecos_df)))
-for i, npi_row in npi_df.iterrows():
-    for j, pecos_row in pecos_df.iterrows():
-        weighted_score = 0
+for index, row in df.iterrows():
+    if index % 2 == 1:  # PECOS row
+        weighted_score_npi = 0
+        weighted_score_pecos = 0
         for col in columns_to_compare:
-            npi_col = 'npi_' + col
-            pecos_col = 'pecos_' + col
-            similarity_score = calculate_similarity_score(str(npi_row[npi_col]), str(pecos_row[pecos_col]))
-            if col == 'fname' or col == 'lname':
-                weighted_score += similarity_score * 25
-            elif col == 'mname':
-                weighted_score += similarity_score * 10
-            elif col == 'gender':
-                weighted_score += similarity_score * 10
-            elif col == 'adr1':
-                weighted_score += similarity_score * 25
-            elif col == 'city':
-                weighted_score += similarity_score * 10
-            elif col == 'state':
-                weighted_score += similarity_score * 15
-            elif col == 'zip':
-                weighted_score += similarity_score * 15
-        similarity_matrix[i, j] = weighted_score
+            similarity_score = calculate_similarity_score(str(row[col]), str(df.iloc[index - 1][col]))
+            if col == 'First Name' or col == 'Last Name':
+                weighted_score_npi += similarity_score * 25
+                weighted_score_pecos += similarity_score * 25
+            elif col == 'Middle Initial':
+                weighted_score_npi += similarity_score * 10
+                weighted_score_pecos += similarity_score * 10
+            elif col == 'Gender':
+                weighted_score_npi += similarity_score * 10
+                weighted_score_pecos += similarity_score * 10
+            elif col == 'Address Line 1':
+                weighted_score_npi += similarity_score * 25
+                weighted_score_pecos += similarity_score * 25
+            elif col == 'City':
+                weighted_score_npi += similarity_score * 10
+                weighted_score_pecos += similarity_score * 10
+            elif col == 'State':
+                weighted_score_npi += similarity_score * 15
+                weighted_score_pecos += similarity_score * 15
+            elif col == 'Zip Code':
+                weighted_score_npi += similarity_score * 15
+                weighted_score_pecos += similarity_score * 15
+        weighted_scores.append(weighted_score_npi)
+        weighted_scores.append(weighted_score_pecos)
 
-# Find best matches
-threshold = 80
-best_matches = {}
-for i in range(len(npi_df)):
-    matching_indices = np.where(similarity_matrix[i] > threshold)[0]
-    if len(matching_indices) > 0:
-        best_match_index = matching_indices[np.argmax(similarity_matrix[i, matching_indices])]
-        best_matches[i] = [best_match_index]
+# Add the 'Weighted_Score' column to the DataFrame
+df['Weighted_Score'] = weighted_scores
 
-# Create a DataFrame with the results
-result_df = pd.DataFrame.from_dict(best_matches, orient='index', columns=['Best_Match_Pecos_Row'])
+# Export the new DataFrame to a CSV file
+output_csv_path = 'matched_pairs_weighted_scores.csv'
+df.to_csv(output_csv_path, index=False)
 
-# Export the results to a CSV file
-output_csv_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/best_matches.csv'
-result_df.to_csv(output_csv_path, index_label='npi_row_id')
-
-print(f"New CSV file '{output_csv_path}' has been created with best matches.")
+print(f"New CSV file '{output_csv_path}' has been created with matched pairs and weighted scores.")
