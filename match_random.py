@@ -26,7 +26,7 @@ def calculate_dissimilarity_percentage(column1, column2):
 results = []
 
 # Match each row of the first 100 pecos with all rows of npi
-for pecos_idx, pecos_row in pecos_df.head(100).iterrows():
+for pecos_idx, pecos_row in pecos_df.head(10).iterrows():
     candidate_scores = []
     
     for npi_idx, npi_row in npi_df.iterrows():
