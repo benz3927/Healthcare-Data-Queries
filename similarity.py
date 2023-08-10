@@ -37,10 +37,6 @@ for col1, col2 in columns_to_compare:
 # Export the new DataFrame to a CSV file
 df.to_csv('weighted_similarity_scores.csv', index=False)
 
-# Print the new DataFrame
-print(df)
-
-
 # Read the CSV file into the DataFrame 'df'
 url2 = 'https://raw.githubusercontent.com/benz3927/Healthcare-Data-Queries/main/weighted_similarity_scores.csv'
 df = pd.read_csv(url2)
@@ -51,13 +47,13 @@ row_labels = []
 
 for index, row in df.iterrows():
     npi_data = [
-        row['NPI_First_Name'], row['NPI_Last_Name'], row['NPI_Middle_Initial'],
+        row['Matched_NPI'], row['NPI_First_Name'], row['NPI_Last_Name'], row['NPI_Middle_Initial'],
         row['NPI_Gender_Code'], row['NPI_Address_Line_1'], row['NPI_City'],
         row['NPI_State'], row['NPI_Zip_Code']
     ]
     
     pecos_data = [
-        row['PECOS_First_Name'], row['PECOS_Last_Name'], row['PECOS_Middle_Initial'],
+        row['Matched_NPI'], row['PECOS_First_Name'], row['PECOS_Last_Name'], row['PECOS_Middle_Initial'],
         row['PECOS_Gender_Code'], row['PECOS_Address_Line_1'], row['PECOS_City'],
         row['PECOS_State'], row['PECOS_Zip_Code']
     ]
@@ -67,14 +63,13 @@ for index, row in df.iterrows():
 
 # Create a new DataFrame for the matched pairs
 output_df = pd.DataFrame(output_data, columns=[
-    'First Name', 'Last Name', 'Middle Initial', 'Gender',
+    'NPI', 'First Name', 'Last Name', 'Middle Initial', 'Gender',
     'Address Line 1', 'City', 'State', 'Zip Code'
 ])
 output_df.insert(0, 'Row Label', row_labels)
 
 # Export the new DataFrame to a CSV file
 output_csv_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/matched_pairs.csv'
-
 output_df.to_csv(output_csv_path, index=False)
 
 print("New CSV file 'matched_pairs.csv' has been created with matched pairs and alternating row labels.")
