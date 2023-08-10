@@ -7,4 +7,5 @@ SELECT
     cty AS pecos_city,
     st AS pecos_state,
     zip AS pecos_zip
+    phn_numbr as pecos_phone
 FROM hcare.pecos
