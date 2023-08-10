@@ -20,6 +20,7 @@ weighted_scores = []
 
 for index, row in df.iterrows():
     if index % 2 == 1:  # PECOS row
+        matched_npi = row['NPI']  # Get the matched NPI
         weighted_score_npi = 0
         weighted_score_pecos = 0
         for col in columns_to_compare:
@@ -48,6 +49,9 @@ for index, row in df.iterrows():
         weighted_scores.append(weighted_score_npi)
         weighted_scores.append(weighted_score_pecos)
 
+# Insert the 'Matched_NPI' column as the first column
+df.insert(0, 'Matched_NPI', matched_npi)
+
 # Add the 'Weighted_Score' column to the DataFrame
 df['Weighted_Score'] = weighted_scores
 
@@ -55,4 +59,4 @@ df['Weighted_Score'] = weighted_scores
 output_csv_path = 'matched_pairs_weighted_scores.csv'
 df.to_csv(output_csv_path, index=False)
 
-print(f"New CSV file '{output_csv_path}' has been created with matched pairs and weighted scores.")
+print(f"New CSV file '{output_csv_path}' has been created with matched pairs, matched NPI, and weighted scores.")
