@@ -7,4 +7,5 @@ SELECT
     Provider_Business_Mailing_Address_City_Name AS npi_city,
     Provider_Business_Mailing_Address_State_Name AS npi_state,
     Provider_Business_Mailing_Address_Postal_Code AS npi_zip
+    Provider_Business_Mailing_Address_Telephone_Number as npi_phone
 FROM hcare.NPI
