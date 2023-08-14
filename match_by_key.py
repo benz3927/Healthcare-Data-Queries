@@ -37,7 +37,7 @@ columns_to_compare = [
 ]
 
 # Initialize a dictionary to store the matching pairs
-matched_pairs = {'pecos_row_index': [], 'npi_row_index': []}
+matched_pairs = {'pecos_row_index': [], 'npi_row_indices': []}
 
 # Iterate through the candidates and calculate weighted similarity scores
 for candidate in candidates_df.itertuples():
@@ -69,7 +69,7 @@ for candidate in candidates_df.itertuples():
     
     if weighted_score > 80:  # Change the threshold if needed
         matched_pairs['pecos_row_index'].append(candidate.pecos_row_index)
-        matched_pairs['npi_row_index'].append(candidate.npi_row_index)
+        matched_pairs['npi_row_indices'].append(candidate.npi_row_index)
 
 # Create a DataFrame with the matching pairs
 matched_pairs_df = pd.DataFrame(matched_pairs)
