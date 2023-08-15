@@ -76,14 +76,14 @@ for index, row in unfound_true_matches.iterrows():
     # Append the formatted output for the npi row
     output_data.append(['NPI', npi_row['nppes_npi'], npi_row['npi_fname'], npi_row['npi_lname'],
                         npi_row['npi_mname'], npi_row['npi_gender'], npi_row['npi_adr1'], npi_row['npi_city'],
-                        npi_row['npi_state'], npi_row['npi_zip'], weighted_score])
+                        npi_row['npi_state'], npi_row['npi_zip'], npi_row['npi_dob'], weighted_score])
     
     # Append the formatted output for the pecos row
     output_data.append(['PECOS', pecos_row['pecos_npi'], pecos_row['pecos_fname'], pecos_row['pecos_lname'],
                         pecos_row['pecos_mname'], pecos_row['pecos_gender'], pecos_row['pecos_adr1'], pecos_row['pecos_city'],
-                        pecos_row['pecos_state'], pecos_row['pecos_zip'], weighted_score])
+                        pecos_row['pecos_state'], pecos_row['pecos_zip'], pecos_row['pecos_dob'], weighted_score])
 
 # Create a DataFrame from the output_data and save it as a CSV
 output_df = pd.DataFrame(output_data, columns=['Row Label', 'Matched_NPI', 'First Name', 'Last Name', 'Middle Initial',
-                                               'Gender', 'Address Line 1', 'City', 'State', 'Zip Code', 'Weighted Score'])
+                                               'Gender', 'Address Line 1', 'City', 'State', 'Zip Code', 'DOB', 'Weighted Score'])
 output_df.to_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/unmatched_matches.csv', index=False)
