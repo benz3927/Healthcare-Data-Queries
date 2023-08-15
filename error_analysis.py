@@ -1,4 +1,5 @@
 import pandas as pd
+import pyxdameraulevenshtein as dl
 
 # Load npi_with_dob.csv
 npi_with_dob = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi_with_dob.csv', dtype=str)
@@ -8,6 +9,14 @@ pecos_with_dob = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Qu
 
 # Load the file with the matches you found
 sorted_indices_df = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/sorted_indices_with_weighted_scores.csv')
+
+# Define the list of columns to compare
+columns_to_compare = ['fname', 'lname', 'mname', 'gender', 'adr1', 'city', 'state', 'zip', 'dob', 'phone']
+
+# Function to calculate similarity score between two strings
+def calculate_similarity_score(str1, str2, column_name):
+    similarity_score = 1 - dl.normalized_damerau_levenshtein_distance(str1, str2)
+    return similarity_score
 
 # Create a set to store the true match PECOS NPIs
 true_match_pecos_npis = set(pecos_with_dob['pecos_npi'])
@@ -22,63 +31,59 @@ for row in sorted_indices_df.itertuples():
     for pecos_index in pecos_indices:
         matched_pecos_npis.add(pecos_with_dob.loc[pecos_index, 'pecos_npi'])
 
-# Find the true match PECOS NPIs that you did not find
-unfound_true_matches = true_match_pecos_npis - matched_pecos_npis
+# Find the true matches (NPIs that are also present in the PECOS NPIs)
+true_matches = npi_with_dob[npi_with_dob['nppes_npi'].isin(pecos_with_dob['pecos_npi'])]
 
-# Create a list to store unmatched matches
-unmatched_matches = []
+# Find the true matches that you did not find
+unfound_true_matches = true_matches[~true_matches['nppes_npi'].isin(matched_pecos_npis)]
 
-# Iterate through the unfound true match PECOS NPIs and find corresponding rows
-for pecos_npi in unfound_true_matches:
-    pecos_row = pecos_with_dob[pecos_with_dob['pecos_npi'] == pecos_npi].iloc[0]
+# Create a DataFrame to store the formatted output
+output_data = []
+
+# Iterate through the unfound true matches
+for index, row in unfound_true_matches.iterrows():
+    npi_row = row
+    pecos_row = pecos_with_dob[pecos_with_dob['pecos_npi'] == row['nppes_npi']].iloc[0]
     
-    # Find the corresponding npi_row
-    matching_indices = pecos_with_dob[pecos_with_dob['pecos_npi'] == pecos_npi].index.tolist()
-    if matching_indices:  # Check if there's a matching npi index
-        npi_row_index = matching_indices[0]
-        npi_row = npi_with_dob.loc[npi_row_index]
+    # Calculate weighted score
+    weighted_score = 0
+    phone_similarity_score = calculate_similarity_score(str(npi_row['npi_phone']), str(pecos_row['pecos_phone']), 'phone')
+    
+    for col in columns_to_compare:
+        npi_col = 'npi_' + col
+        pecos_col = 'pecos_' + col
+        similarity_score = calculate_similarity_score(str(npi_row[npi_col]), str(pecos_row[pecos_col]), col)
         
-        # Append the unmatched match rows to the list
-        unmatched_matches.append(pd.concat([pecos_row, npi_row], ignore_index=True))
-
-# Concatenate the list of unmatched match DataFrames
-unmatched_matches_df = pd.concat(unmatched_matches, ignore_index=True)
-
-# Save the unmatched matches DataFrame as a CSV
-unmatched_matches_df.to_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/unmatched_matches.csv', index=False)
-
-
-
-# Load the unmatched matches CSV
-unmatched_matches_df = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/unmatched_matches.csv', dtype=str)
-
-# Sort the unmatched matches DataFrame by 'nppes_npi'
-unmatched_matches_df.sort_values(by='nppes_npi', inplace=True)
-
-# Load the unmatched matches CSV
-unmatched_matches_df = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/unmatched_matches.csv', dtype=str)
-
-# Sort the unmatched matches DataFrame by the index
-unmatched_matches_df.sort_index(inplace=True)
-
-# Create a new DataFrame to store the cleaned up format
-cleaned_matches_df = pd.DataFrame(columns=unmatched_matches_df.columns)
-
-# Iterate through each unmatched match row and format the data
-for idx, row in unmatched_matches_df.iterrows():
-    npi = row['NPI']
-    pecos_npi = row['Unmatched_NPI']
+        if col in ['fname', 'lname']:
+            weighted_score += similarity_score * 25
+        elif col == 'mname':
+            weighted_score += similarity_score * 10
+        elif col == 'gender':
+            weighted_score += similarity_score * 10
+        elif col == 'adr1':
+            weighted_score += similarity_score * 25
+        elif col == 'city':
+            weighted_score += similarity_score * 10
+        elif col == 'state':
+            weighted_score += similarity_score * 15
+        elif col == 'zip':
+            weighted_score += similarity_score * 15
+        elif col == 'dob':
+            weighted_score += similarity_score * 35
+        elif col == 'phone':
+            weighted_score += similarity_score * 20  # Adjust the weight as needed
     
-    npi_row = ['NPI', row['Row Label'], npi, row['First Name'], row['Last Name'],
-               row['Middle Initial'], row['Gender'], row['Address Line 1'], row['City'],
-               row['State'], row['Zip Code'], row['Weighted_Score']]
+    # Append the formatted output for the npi row
+    output_data.append(['NPI', npi_row['nppes_npi'], npi_row['npi_fname'], npi_row['npi_lname'],
+                        npi_row['npi_mname'], npi_row['npi_gender'], npi_row['npi_adr1'], npi_row['npi_city'],
+                        npi_row['npi_state'], npi_row['npi_zip'], weighted_score])
     
-    pecos_row = ['PECOS', row['Row Label'], pecos_npi, row['First Name'], row['Last Name'],
-                 row['Middle Initial'], row['Gender'], row['Address Line 1'], row['City'],
-                 row['State'], row['Zip Code'], row['Weighted_Score']]
-    
-    cleaned_matches_df = cleaned_matches_df.append(pd.Series(npi_row, index=cleaned_matches_df.columns), ignore_index=True)
-    cleaned_matches_df = cleaned_matches_df.append(pd.Series(pecos_row, index=cleaned_matches_df.columns), ignore_index=True)
+    # Append the formatted output for the pecos row
+    output_data.append(['PECOS', pecos_row['pecos_npi'], pecos_row['pecos_fname'], pecos_row['pecos_lname'],
+                        pecos_row['pecos_mname'], pecos_row['pecos_gender'], pecos_row['pecos_adr1'], pecos_row['pecos_city'],
+                        pecos_row['pecos_state'], pecos_row['pecos_zip'], weighted_score])
 
-# Save the cleaned matches DataFrame as a CSV
-cleaned_matches_df.to_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/cleaned_matches.csv', index=False)
+# Create a DataFrame from the output_data and save it as a CSV
+output_df = pd.DataFrame(output_data, columns=['Row Label', 'Matched_NPI', 'First Name', 'Last Name', 'Middle Initial',
+                                               'Gender', 'Address Line 1', 'City', 'State', 'Zip Code', 'Weighted Score'])
+output_df.to_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/unmatched_matches.csv', index=False)
