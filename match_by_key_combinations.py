@@ -2,8 +2,8 @@ import pandas as pd
 import pyxdameraulevenshtein as dl
 import re
 
-# Load npi_with_dob.csv
-npi_with_dob = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi_with_dob.csv', dtype=str)
+# Load npi.csv
+npi = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi_with_dob.csv', dtype=str)
 
 # Load pecos_with_dob.csv
 pecos_with_dob = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos_sample.csv', dtype=str)
@@ -19,20 +19,23 @@ def sanitize_string(s):
     return s
 
 # Add key columns to NPI and PECOS DataFrames
-npi_with_dob['npi_key1'] = (
-    npi_with_dob['npi_dob'] + npi_with_dob['npi_adr1'].apply(sanitize_string)
+npi['npi_key1'] = (
+    npi['npi_dob'] + npi['npi_adr1'].apply(sanitize_string)
 )
-npi_with_dob['npi_key2'] = (
-    npi_with_dob['npi_dob'] + npi_with_dob['npi_lname'].apply(sanitize_string)
+npi['npi_key2'] = (
+    npi['npi_dob'] + npi['npi_lname'].apply(sanitize_string)
 )
-npi_with_dob['npi_key3'] = (
-    npi_with_dob['npi_lname'].apply(sanitize_string) + npi_with_dob['npi_adr1'].apply(sanitize_string)
+npi['npi_key3'] = (
+    npi['npi_lname'].apply(sanitize_string) + npi['npi_adr1'].apply(sanitize_string)
 )
-npi_with_dob['npi_key4'] = (
-    npi_with_dob['npi_lname'].apply(sanitize_string) + npi_with_dob['npi_phone'].apply(sanitize_string)
+npi['npi_key4'] = (
+    npi['npi_lname'].apply(sanitize_string) + npi['npi_phone'].apply(sanitize_string)
 )
-npi_with_dob['npi_key5'] = (
-    npi_with_dob['npi_fname'].str[:4] + npi_with_dob['npi_lname'].str[:5] + npi_with_dob['npi_dob'].apply(sanitize_string).str[:4]
+npi['npi_key5'] = (
+    npi['npi_fname'].str[:4] +
+    npi['npi_lname'].str[:5] +
+    npi['npi_dob'].apply(sanitize_string).str[:2] +
+    npi['npi_dob'].apply(sanitize_string).str[-2:]
 )
 
 pecos_with_dob['pecos_key1'] = (
@@ -48,7 +51,10 @@ pecos_with_dob['pecos_key4'] = (
     pecos_with_dob['pecos_lname'].apply(sanitize_string) + pecos_with_dob['pecos_phone'].apply(sanitize_string)
 )
 pecos_with_dob['pecos_key5'] = (
-    pecos_with_dob['pecos_fname'].str[:4] + pecos_with_dob['pecos_lname'].str[:5] + pecos_with_dob['pecos_dob'].apply(sanitize_string).str[:4]
+    pecos_with_dob['pecos_fname'].str[:4] +
+    pecos_with_dob['pecos_lname'].str[:5] +
+    pecos_with_dob['pecos_dob'].apply(sanitize_string).str[:2] +
+    pecos_with_dob['pecos_dob'].apply(sanitize_string).str[-2:]
 )
 
 # Initialize a list to store the candidates
@@ -59,7 +65,7 @@ columns_to_compare = [
 ]
 
 # Iterate through each row of the NPI DataFrame
-for npi_index, npi_row in npi_with_dob.iterrows():
+for npi_index, npi_row in npi.iterrows():
     npi_keys = [npi_row['npi_key1'], npi_row['npi_key2'], npi_row['npi_key3'], npi_row['npi_key4'], npi_row['npi_key5']]
     
     matching_rows = pecos_with_dob[
@@ -92,13 +98,45 @@ for npi_index, npi_row in npi_with_dob.iterrows():
             if col == 'phone':
                 weighted_score += similarity_score * 20  # Adjust the weight as needed
         
-        if weighted_score > 120:
+        if weighted_score > 80:
             candidates.append({'npi_row_index': npi_index, 'pecos_row_index': pecos_index, 'weighted_score': weighted_score})
             
 # Create a DataFrame from the candidates list
 candidates_df = pd.DataFrame(candidates)
 
-# Sort the DataFrame based on the weighted scores
+# Iterate through each candidate and check for NA values in the matching keys
+for index, candidate in candidates_df.iterrows():
+    npi_index = candidate['npi_row_index']
+    pecos_index = candidate['pecos_row_index']
+    weighted_score = candidate['weighted_score']
+    
+    npi_keys = [
+        npi.loc[npi_index, 'npi_key1'],
+        npi.loc[npi_index, 'npi_key2'],
+        npi.loc[npi_index, 'npi_key3'],
+        npi.loc[npi_index, 'npi_key4'],
+        npi.loc[npi_index, 'npi_key5']
+    ]
+    
+    pecos_keys = [
+        pecos_with_dob.loc[pecos_index, 'pecos_key1'],
+        pecos_with_dob.loc[pecos_index, 'pecos_key2'],
+        pecos_with_dob.loc[pecos_index, 'pecos_key3'],
+        pecos_with_dob.loc[pecos_index, 'pecos_key4'],
+        pecos_with_dob.loc[pecos_index, 'pecos_key5']
+    ]
+    
+    # Check if either NPI or PECOS key has NA values
+    if any(pd.isna(key) for key in npi_keys) or any(pd.isna(key) for key in pecos_keys):
+        # Adjust the threshold for NA keys to 120
+        if weighted_score > 120:
+            candidates_df.at[index, 'weighted_score'] = weighted_score  # Update the weighted score
+    else:
+        # Apply the original threshold of 80
+        if weighted_score > 80:
+            candidates_df.at[index, 'weighted_score'] = weighted_score  # Update the weighted score
+
+# Sort the DataFrame based on the updated weighted scores
 candidates_df.sort_values(by='weighted_score', ascending=False, inplace=True)
 
 # Group and store the sorted indices in a list for each NPI row
