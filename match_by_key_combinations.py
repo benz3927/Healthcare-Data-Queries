@@ -109,7 +109,7 @@ grouped = candidates_df.groupby('npi_row_index')['pecos_row_index'].apply(list)
 sorted_indices_df = grouped.reset_index(name='pecos_row_indices')
 
 # Export the DataFrame to a CSV file
-output_csv_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/sorted_indices_with_weighted_scores_updated.csv'
+output_csv_path = '/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/final_matches.csv'
 sorted_indices_df.to_csv(output_csv_path, index=False)
 
 print(f"New CSV file '{output_csv_path}' has been created with updated sorted indices and weighted scores.")
