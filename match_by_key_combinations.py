@@ -31,6 +31,9 @@ npi_with_dob['npi_key3'] = (
 npi_with_dob['npi_key4'] = (
     npi_with_dob['npi_lname'].apply(sanitize_string) + npi_with_dob['npi_phone'].apply(sanitize_string)
 )
+npi_with_dob['npi_key5'] = (
+    npi_with_dob['npi_fname'].str[:4] + npi_with_dob['npi_lname'].str[:5] + npi_with_dob['npi_dob'].apply(sanitize_string).str[:4]
+)
 
 pecos_with_dob['pecos_key1'] = (
     pecos_with_dob['pecos_dob'] + pecos_with_dob['pecos_adr1'].apply(sanitize_string)
@@ -44,6 +47,9 @@ pecos_with_dob['pecos_key3'] = (
 pecos_with_dob['pecos_key4'] = (
     pecos_with_dob['pecos_lname'].apply(sanitize_string) + pecos_with_dob['pecos_phone'].apply(sanitize_string)
 )
+pecos_with_dob['pecos_key5'] = (
+    pecos_with_dob['pecos_fname'].str[:4] + pecos_with_dob['pecos_lname'].str[:5] + pecos_with_dob['pecos_dob'].apply(sanitize_string).str[:4]
+)
 
 # Initialize a list to store the candidates
 candidates = []
@@ -54,21 +60,14 @@ columns_to_compare = [
 
 # Iterate through each row of the NPI DataFrame
 for npi_index, npi_row in npi_with_dob.iterrows():
-    npi_key1 = npi_row['npi_key1']
-    npi_key2 = npi_row['npi_key2']
-    npi_key3 = npi_row['npi_key3']
-    npi_key4 = npi_row['npi_key4']
+    npi_keys = [npi_row['npi_key1'], npi_row['npi_key2'], npi_row['npi_key3'], npi_row['npi_key4'], npi_row['npi_key5']]
     
     matching_rows = pecos_with_dob[
-        (pecos_with_dob['pecos_key1'] == npi_key1) |
-        (pecos_with_dob['pecos_key2'] == npi_key2) |
-        (pecos_with_dob['pecos_key3'] == npi_key3) |
-        (pecos_with_dob['pecos_key4'] == npi_key4)
+        pecos_with_dob[['pecos_key1', 'pecos_key2', 'pecos_key3', 'pecos_key4', 'pecos_key5']].isin(npi_keys).any(axis=1)
     ]
     
     for pecos_index, pecos_row in matching_rows.iterrows():
         weighted_score = 0
-        
         for col in columns_to_compare:
             npi_col = 'npi_' + col
             pecos_col = 'pecos_' + col
@@ -76,26 +75,26 @@ for npi_index, npi_row in npi_with_dob.iterrows():
             
             if col in ['fname', 'lname']:
                 weighted_score += similarity_score * 25
-            elif col == 'mname':
+            if col == 'mname':
                 weighted_score += similarity_score * 10
-            elif col == 'gender':
+            if col == 'gender':
                 weighted_score += similarity_score * 10
-            elif col == 'adr1':
+            if col == 'adr1':
                 weighted_score += similarity_score * 25
-            elif col == 'city':
+            if col == 'city':
                 weighted_score += similarity_score * 10
-            elif col == 'state':
+            if col == 'state':
                 weighted_score += similarity_score * 15
-            elif col == 'zip':
+            if col == 'zip':
                 weighted_score += similarity_score * 15
-            elif col == 'dob':
+            if col == 'dob':
                 weighted_score += similarity_score * 35
-            elif col == 'phone':
+            if col == 'phone':
                 weighted_score += similarity_score * 20  # Adjust the weight as needed
         
         if weighted_score > 80:
             candidates.append({'npi_row_index': npi_index, 'pecos_row_index': pecos_index, 'weighted_score': weighted_score})
-
+            
 # Create a DataFrame from the candidates list
 candidates_df = pd.DataFrame(candidates)
 
