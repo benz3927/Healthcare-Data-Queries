@@ -1,5 +1,5 @@
 select
-	npi
+	npi as nppes_npi,
     Provider_First_Name AS npi_fname,
     Provider_Last_Name_Legal_Name AS npi_lname,
     Provider_Middle_Name AS npi_mname,
