@@ -16,7 +16,7 @@ def retrieve_npi_values(npi_row_index, pecos_row_indices, npi_df, pecos_df):
     return npi_values
 
 # Load sorted_indices_with_weighted_scores.csv
-sorted_indices_df = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/sorted_indices_with_weighted_scores.csv')
+sorted_indices_df = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/final_matches.csv')
 
 # Load npi_with_dob.csv and pecos_with_dob.csv
 npi_with_dob = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/npi_with_dob.csv', dtype=str)
