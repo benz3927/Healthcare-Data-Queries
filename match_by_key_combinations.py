@@ -92,7 +92,7 @@ for npi_index, npi_row in npi_with_dob.iterrows():
             if col == 'phone':
                 weighted_score += similarity_score * 20  # Adjust the weight as needed
         
-        if weighted_score > 80:
+        if weighted_score > 120:
             candidates.append({'npi_row_index': npi_index, 'pecos_row_index': pecos_index, 'weighted_score': weighted_score})
             
 # Create a DataFrame from the candidates list
