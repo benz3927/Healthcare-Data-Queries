@@ -1,5 +1,5 @@
 select
-	npi,
+	npi as pecos_npi,
     frst_nm  AS pecos_fname,
     lst_nm AS pecos_lname,
     mid_nm AS pecos_mname,
