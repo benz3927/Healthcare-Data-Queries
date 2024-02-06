@@ -8,7 +8,7 @@ npi_with_dob = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Quer
 pecos_with_dob = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/pecos_sample.csv', dtype=str)
 
 # Load the file with the matches you found
-sorted_indices_df = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/final_matches.csv')
+sorted_indices_df = pd.read_csv('/Users/benzhao/Documents/GitHub/Healthcare-Data-Queries/data/final_matched_pairs_candidates.csv')
 
 # Define the list of columns to compare
 columns_to_compare = ['fname', 'lname', 'mname', 'gender', 'adr1', 'city', 'state', 'zip', 'dob', 'phone']
